@@ -82,25 +82,40 @@ static BOOL logEnable = NO;
  * APNs注册成功回调，将返回的deviceToken上传到CloudPush服务器
  */
 - (void)application: (UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(nonnull NSData *)deviceToken {
-    [CloudPushSDK registerDevice:deviceToken withCallback:^(CloudPushCallbackResult *res) {
-        if (res.success) {
-            PushLogD(@"Register deviceToken successfully, deviceToken: %@",[CloudPushSDK getApnsDeviceToken]);
-            NSMutableDictionary *dic = [NSMutableDictionary dictionary];
-            [dic setValue:[CloudPushSDK getApnsDeviceToken] forKey:@"apnsDeviceToken"];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self.channel invokeMethod:@"onRegisterDeviceTokenSuccess" arguments:dic];
-            });
-        } else {
-            PushLogD(@"Register deviceToken failed, error: %@", res.error);
-            NSMutableDictionary *dic = [NSMutableDictionary dictionary];
-            [dic setValue:res.error forKey:@"error"];
-            dispatch_async(dispatch_get_main_queue(), ^{
-                [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
-            });
-        }
-    }];
+    @try {
+        [CloudPushSDK registerDevice:deviceToken withCallback:^(CloudPushCallbackResult *res) {
+            if (res.success) {
+                PushLogD(@"Register deviceToken successfully, deviceToken: %@", [CloudPushSDK getApnsDeviceToken]);
+                NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+                [dic setValue:[CloudPushSDK getApnsDeviceToken] forKey:@"apnsDeviceToken"];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self.channel invokeMethod:@"onRegisterDeviceTokenSuccess" arguments:dic];
+                });
+            } else {
+                PushLogD(@"Register deviceToken failed, error: %@", res.error);
+                NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+                if (res.error) {
+                    [dic setValue:res.error.localizedDescription forKey:@"error"];
+                } else {
+                    [dic setValue:@"Unknown error occurred during device token registration" forKey:@"error"];
+                }
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
+                });
+            }
+        }];
+    } @catch (NSException *exception) {
+        PushLogD(@"Exception occurred during APNs registration: %@", exception);
+        NSMutableDictionary *dic = [NSMutableDictionary dictionary];
+        [dic setValue:exception.reason forKey:@"error"];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
+        });
+    }
+    
     PushLogD(@"####### ===> APNs register success");
 }
+
 
 /*
  *  APNs注册失败回调
