@@ -87,12 +87,16 @@ static BOOL logEnable = NO;
             PushLogD(@"Register deviceToken successfully, deviceToken: %@",[CloudPushSDK getApnsDeviceToken]);
             NSMutableDictionary *dic = [NSMutableDictionary dictionary];
             [dic setValue:[CloudPushSDK getApnsDeviceToken] forKey:@"apnsDeviceToken"];
-            [self.channel invokeMethod:@"onRegisterDeviceTokenSuccess" arguments:dic];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.channel invokeMethod:@"onRegisterDeviceTokenSuccess" arguments:dic];
+            });
         } else {
             PushLogD(@"Register deviceToken failed, error: %@", res.error);
             NSMutableDictionary *dic = [NSMutableDictionary dictionary];
             [dic setValue:res.error forKey:@"error"];
-            [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
+            });
         }
     }];
     PushLogD(@"####### ===> APNs register success");
@@ -104,7 +108,9 @@ static BOOL logEnable = NO;
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
     NSMutableDictionary *dic = [NSMutableDictionary dictionary];
     [dic setValue:error.userInfo.description forKey:@"error"];
-    [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.channel invokeMethod:@"onRegisterDeviceTokenFailed" arguments:dic];
+    });
     PushLogD(@"####### ===> APNs register failed, %@", error);
 }
 
@@ -154,8 +160,9 @@ static BOOL logEnable = NO;
     NSLog(@"###### onNotification  userInfo = [%@]", userInfo);
     
     [CloudPushSDK sendNotificationAck:userInfo];
-    
-    [self.channel invokeMethod:@"onNotification" arguments:userInfo];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.channel invokeMethod:@"onNotification" arguments:userInfo];
+    });
     
     if (_remoteNotification && userInfo) {
         NSString* msgId = [userInfo valueForKey:@"m"];
@@ -163,7 +170,9 @@ static BOOL logEnable = NO;
         if (msgId && remoteMsgId && [msgId isEqualToString:remoteMsgId]) {
             [CloudPushSDK sendNotificationAck:_remoteNotification];
             NSLog(@"###### onNotificationOpened  argument = [%@]", _remoteNotification);
-            [self.channel invokeMethod:@"onNotificationOpened" arguments:_remoteNotification];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self.channel invokeMethod:@"onNotificationOpened" arguments:_remoteNotification];
+            });
             _remoteNotification = nil;
         }
     }
@@ -185,7 +194,9 @@ static BOOL logEnable = NO;
 
     // 通知打开回执上报
     [CloudPushSDK sendNotificationAck:userInfo];
-    [self.channel invokeMethod:@"onNotification" arguments:userInfo];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.channel invokeMethod:@"onNotification" arguments:userInfo];
+    });
 }
 
 /*
@@ -213,13 +224,17 @@ static BOOL logEnable = NO;
     // 点击通知打开
     if ([userAction isEqualToString:UNNotificationDefaultActionIdentifier]) {
         [CloudPushSDK sendNotificationAck:response.notification.request.content.userInfo];
-        [self.channel invokeMethod:@"onNotificationOpened" arguments:response.notification.request.content.userInfo];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.channel invokeMethod:@"onNotificationOpened" arguments:response.notification.request.content.userInfo];
+        });
     }
     // 通知dismiss，category创建时传入UNNotificationCategoryOptionCustomDismissAction才可以触发
     if ([userAction isEqualToString:UNNotificationDismissActionIdentifier]) {
         //通知删除回执上报
         [CloudPushSDK sendDeleteNotificationAck:response.notification.request.content.userInfo];
-        [self.channel invokeMethod:@"onNotificationRemoved" arguments:response.notification.request.content.userInfo];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.channel invokeMethod:@"onNotificationRemoved" arguments:response.notification.request.content.userInfo];
+        });
     }
     
     completionHandler();
@@ -338,7 +353,9 @@ static BOOL logEnable = NO;
  */
 - (void)onChannelOpened:(NSNotification *)notification {
     NSMutableDictionary *dic = [NSMutableDictionary dictionary];
-    [self.channel invokeMethod:@"onChannelOpened" arguments:dic];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.channel invokeMethod:@"onChannelOpened" arguments:dic];
+    });
 }
 
 #pragma mark Receive Message
@@ -360,7 +377,9 @@ static BOOL logEnable = NO;
     NSMutableDictionary *dic = [NSMutableDictionary dictionary];
     [dic setValue:message.title forKey:@"title"];
     [dic setValue:message.body forKey:@"body"];
-    [self.channel invokeMethod:@"onMessage" arguments:dic];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.channel invokeMethod:@"onMessage" arguments:dic];
+    });
 }
 
 /* 设置角标个数 */
